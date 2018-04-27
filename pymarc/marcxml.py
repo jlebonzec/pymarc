@@ -134,16 +134,37 @@ def parse_xml_to_array(xml_file, strict=False, normalize_form=None):
 
 
 def record_to_xml(record, quiet=False, namespace=False):
+    """ Convert a record object into an XML string
+
+    See `record_to_xml_node` for the parameters.
+    """
     node = record_to_xml_node(record, quiet, namespace)
     return ET.tostring(node)
 
 
 def record_to_xml_node(record, quiet=False, namespace=False):
-    """
-    converts a record object to a chunk of xml
+    """ Convert a record object into an XML object
 
-    # include the marcxml namespace in the root tag (default: False)
-    record_to_xml(record, namespace=True)
+    If you want the XML string directly, use `record_to_xml()` instead.
+
+    :param record: the record object (pymarc.record.Record) to convert
+    :type record: Record
+
+    :param quiet: Whether MARC8 to Unicode conversion should be silent or not
+    :type quiet: bool
+
+    :param namespace: Whether the MARC namespace should be added or not
+    :type namespace: bool
+
+    :return: an XML object representing the record
+    :rtype: object
+
+    :Examples of usage:
+
+    - Normal conversion
+    >>> xml_obj = record_to_xml_node(record)
+    - include the marcxml namespace in the root tag (default: False)
+    >>> xml_obj = record_to_xml_node(record, namespace=True)
     """
     # helper for converting non-unicode data to unicode
     # TODO: maybe should set g0 and g1 appropriately using 066 $a and $b?
@@ -156,12 +177,15 @@ def record_to_xml_node(record, quiet=False, namespace=False):
             return marc8.translate(data)
 
     root = ET.Element('record')
+
     if namespace:
         root.set('xmlns', MARC_XML_NS)
         root.set('xmlns:xsi', XSI_NS)
         root.set('xsi:schemaLocation', MARC_XML_SCHEMA)
+
     leader = ET.SubElement(root, 'leader')
     leader.text = record.leader
+
     for field in record:
         if field.is_control_field():
             control_field = ET.SubElement(root, 'controlfield')
