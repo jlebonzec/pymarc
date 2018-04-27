@@ -18,8 +18,8 @@ XSI_NS = "http://www.w3.org/2001/XMLSchema-instance"
 MARC_XML_NS = "http://www.loc.gov/MARC21/slim"
 MARC_XML_SCHEMA = "http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd"
 
-class XmlHandler(ContentHandler):
 
+class XmlHandler(ContentHandler):
     """
     You can subclass XmlHandler and add your own process_record
     method that'll be passed a pymarc.Record as it becomes
@@ -27,6 +27,7 @@ class XmlHandler(ContentHandler):
     records elsewhere (like to a rdbms) without having to store
     them all in memory.
     """
+
     def __init__(self, strict=False, normalize_form=None):
         self.records = []
         self._record = None
@@ -62,7 +63,8 @@ class XmlHandler(ContentHandler):
 
         element = name[1]
         if self.normalize_form is not None:
-            text = unicodedata.normalize(self.normalize_form, u''.join(self._text))
+            text = unicodedata.normalize(self.normalize_form,
+                                         u''.join(self._text))
         else:
             text = u''.join(self._text)
 
@@ -91,6 +93,7 @@ class XmlHandler(ContentHandler):
     def process_record(self, record):
         self.records.append(record)
 
+
 def parse_xml(xml_file, handler):
     """
     parse a file with a given subclass of xml.sax.handler.ContentHandler
@@ -99,6 +102,7 @@ def parse_xml(xml_file, handler):
     parser.setContentHandler(handler)
     parser.setFeature(feature_namespaces, 1)
     parser.parse(xml_file)
+
 
 def map_xml(function, *files):
     """
@@ -115,6 +119,7 @@ def map_xml(function, *files):
     for xml_file in files:
         parse_xml(xml_file, handler)
 
+
 def parse_xml_to_array(xml_file, strict=False, normalize_form=None):
     """
     parse an xml file and return the records as an array. If you would
@@ -127,9 +132,11 @@ def parse_xml_to_array(xml_file, strict=False, normalize_form=None):
     parse_xml(xml_file, handler)
     return handler.records
 
+
 def record_to_xml(record, quiet=False, namespace=False):
     node = record_to_xml_node(record, quiet, namespace)
     return ET.tostring(node)
+
 
 def record_to_xml_node(record, quiet=False, namespace=False):
     """
@@ -141,6 +148,7 @@ def record_to_xml_node(record, quiet=False, namespace=False):
     # helper for converting non-unicode data to unicode
     # TODO: maybe should set g0 and g1 appropriately using 066 $a and $b?
     marc8 = MARC8ToUnicode(quiet=quiet)
+
     def translate(data):
         if type(data) == six.text_type:
             return data
