@@ -7,6 +7,7 @@ import unicodedata
 from six import unichr
 from pymarc import marc8_mapping
 
+
 def marc8_to_unicode(marc8, hide_utf8_warnings=False):
     """
     Pass in a string, and get back a Unicode object.
@@ -19,11 +20,8 @@ def marc8_to_unicode(marc8, hide_utf8_warnings=False):
     converter = MARC8ToUnicode(quiet=hide_utf8_warnings)
     try:
         return converter.translate(marc8)
-    except IndexError:
-        # convert IndexError into UnicodeDecodeErrors
-        raise UnicodeDecodeError("marc8_to_unicode", marc8, 0, len(marc8), "invalid multibyte character encoding")
-    except TypeError:
-        # convert TypeError into UnicodeDecodeErrors
+    except (IndexError, TypeError):
+        # convert IndexError and TypeError into UnicodeDecodeErrors
         raise UnicodeDecodeError("marc8_to_unicode", marc8, 0, len(marc8), "invalid multibyte character encoding")
 
 
@@ -47,27 +45,42 @@ class MARC8ToUnicode:
     """
     basic_latin = 0x42
     ansel = 0x45
+
     def __init__(self, G0=basic_latin, G1=ansel, quiet=False):
         self.g0 = G0
-        self.g0_set = set([b'(', b',', b'$'])
+        self.g0_set = {b'(', b',', b'$'}
         self.g1 = G1
-        self.g1_set = set([b')', b'-', b'$'])
+        self.g1_set = {b')', b'-', b'$'}
         self.quiet = quiet
 
     def translate(self, marc8_string):
+        """
+        Convert a MARC8 byte string into its unicode counterpart
+
+        See: http://www.loc.gov/marc/specifications/speccharmarc8.html
+
+        :param marc8_string: the MARC8 string to convert
+        :return: the unicode equivalent of the MARC8 byte string
+        """
         # don't choke on empty marc8_string
         if not marc8_string:
             return u''
+
         uni_list = []
         combinings = []
         pos = 0
+
+        def is_multibyte(charset):
+            return charset == 0x31
+
         while pos < len(marc8_string):
-            # http://www.loc.gov/marc/specifications/speccharmarc8.html
+            # Note: we're using slicing to avoid index errors
             if marc8_string[pos:pos+1] == b'\x1b':
                 next_byte = marc8_string[pos+1:pos+2]
-                if (next_byte in self.g0_set):
+
+                if next_byte in self.g0_set:
                     if len(marc8_string) >= pos + 3:
-                        if marc8_string[pos+2:pos+3] == b',' and next_byte == b'$':
+                        if marc8_string[pos+1:pos+3] == b'$,':
                             pos += 1
                         self.g0 = ord(marc8_string[pos+2:pos+3])
                         pos = pos + 3
@@ -97,24 +110,20 @@ class MARC8ToUnicode:
                         if pos == len(marc8_string):
                             break
 
-
-            def is_multibyte(charset):
-                return charset == 0x31
-
             mb_flag = is_multibyte(self.g0)
 
             if mb_flag:
-                code_point = (ord(marc8_string[pos:pos+1]) * 65536 +
-                              ord(marc8_string[pos+1:pos+2]) * 256 +
-                              ord(marc8_string[pos+2:pos+3]))
+                code_point = (
+                    (ord(marc8_string[pos:pos+1]) << 16) +  # shift 2 bytes
+                    (ord(marc8_string[pos+1:pos+2]) << 8) +  # shift 1 byte
+                    (ord(marc8_string[pos+2:pos+3]))
+                )
                 pos += 3
             else:
                 code_point = ord(marc8_string[pos:pos+1])
                 pos += 1
 
-            if (code_point < 0x20 or
-                (code_point > 0x80 and code_point < 0xa0)):
-                uni = unichr(code_point)
+            if code_point < 0x20 or 0xa0 > code_point > 0x80:
                 continue
 
             try:
@@ -133,7 +142,7 @@ class MARC8ToUnicode:
                     pass
                 if not self.quiet:
                     sys.stderr.write("couldn't find 0x%x in g0=%s g1=%s\n" %
-                        (code_point, self.g0, self.g1))
+                                     (code_point, self.g0, self.g1))
                 uni = ord(' ')
                 cflag = False
 
