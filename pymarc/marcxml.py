@@ -1,6 +1,5 @@
-"pymarc marcxml file."
+""" pymarc marcxml file. """
 
-import logging
 from xml.sax import make_parser
 from xml.sax.handler import ContentHandler, feature_namespaces
 import unicodedata
@@ -29,6 +28,7 @@ class XmlHandler(ContentHandler):
     """
 
     def __init__(self, strict=False, normalize_form=None):
+        super(XmlHandler, self).__init__()
         self.records = []
         self._record = None
         self._field = None
@@ -104,18 +104,18 @@ def parse_xml(xml_file, handler):
     parser.parse(xml_file)
 
 
-def map_xml(function, *files):
+def map_xml(fnc, *files):
     """
     map a function onto the file, so that for each record that is
     parsed the function will get called with the extracted record
 
-    def do_it(r):
-      print(r)
-
-    map_xml(do_it, 'marc.xml')
+    >>> def do_it(r):
+    >>>     print(r)
+    >>>
+    >>> map_xml(do_it, 'marc.xml')
     """
     handler = XmlHandler()
-    handler.process_record = function
+    handler.process_record = fnc
     for xml_file in files:
         parse_xml(xml_file, handler)
 

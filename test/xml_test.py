@@ -5,32 +5,36 @@ import six
 import pymarc
 
 from os.path import getsize
-from six.moves import cStringIO as StringIO
+from importlib import reload
 
 
 class XmlTest(unittest.TestCase):
 
-    def test_map_xml(self):
+    def setUp(self):
         self.seen = 0
-        def count(record):
-            self.seen += 1
-        pymarc.map_xml(count, 'test/batch.xml')
-        self.assertEqual(2, self.seen)
 
-    def test_multi_map_xml(self):
-        self.seen = 0
-        def count(record):
-            self.seen += 1
-        pymarc.map_xml(count, 'test/batch.xml', 'test/batch.xml')
-        self.assertEqual(4, self.seen)
+    def count(self, record):
+        self.seen += 1
 
-    def test_parse_to_array(self):
+    def test_map_xml_with_no_xml(self):
+        pymarc.map_xml(self.count)
+        self.assertEqual(self.seen, 0)
+
+    def test_map_xml_with_one_xml(self):
+        pymarc.map_xml(self.count, 'test/batch.xml')
+        self.assertEqual(self.seen, 2)
+
+    def test_multi_map_with_two_xml(self):
+        pymarc.map_xml(self.count, 'test/batch.xml', 'test/batch.xml')
+        self.assertEqual(self.seen, 4)
+
+    def test_parse_xml_to_array(self):
         records = pymarc.parse_xml_to_array('test/batch.xml')
         self.assertEqual(len(records), 2)
 
         # should've got two records
-        self.assertEqual(type(records[0]), pymarc.Record)
-        self.assertEqual(type(records[1]), pymarc.Record)
+        self.assertTrue(isinstance(records[0], pymarc.Record))
+        self.assertTrue(isinstance(records[1], pymarc.Record))
 
         # first record should have 18 fields
         record = records[0]
@@ -47,7 +51,11 @@ class XmlTest(unittest.TestCase):
         self.assertEqual(field['a'], u'The Great Ray Charles')
         self.assertEqual(field['h'], u'[sound recording].')
 
-    def test_xml(self):
+    def test_parse_xml_to_array_with_strict(self):
+        a = pymarc.parse_xml_to_array(open('test/batch.xml'), strict=True)
+        self.assertEqual(len(a), 2)
+
+    def test_record_to_xml(self):
         # read in xml to a record
         record1 = pymarc.parse_xml_to_array('test/batch.xml')[0]
         # generate xml
@@ -65,11 +73,15 @@ class XmlTest(unittest.TestCase):
         pos = 0
         while pos < len(field1):
             self.assertEqual(field1[pos].tag, field2[pos].tag)
+
             if field1[pos].is_control_field():
                 self.assertEqual(field1[pos].data, field2[pos].data)
             else:
-                self.assertEqual(field1[pos].get_subfields(), field2[pos].get_subfields())
-                self.assertEqual(field1[pos].indicators, field2[pos].indicators)
+                self.assertEqual(field1[pos].get_subfields(),
+                                 field2[pos].get_subfields())
+                self.assertEqual(field1[pos].indicators,
+                                 field2[pos].indicators)
+
             pos += 1
 
     # this test stopped working when Record.as_marc started returning a
@@ -110,32 +122,23 @@ class XmlTest(unittest.TestCase):
         # no errors should have been written
         self.assertEqual(getsize(outfile), 0)
 
-    def test_strict(self):
-        a = pymarc.parse_xml_to_array(open('test/batch.xml'), strict=True)
-        self.assertEqual(len(a), 2)
+    def test_record_to_xml_with_namespace(self):
+        with open('test/test.dat', 'rb') as fh:
+            record = next(pymarc.reader.MARCReader(fh))
+            xml = pymarc.record_to_xml(record, namespace=True)
+            self.assertIn(b'xmlns="http://www.loc.gov/MARC21/slim"', xml)
 
-    def test_xml_namespaces(self):
-        """ Tests the 'namespace' parameter of the record_to_xml() method
-        """
-        # get a test record
-        fh = open('test/test.dat', 'rb')
-        record = next(pymarc.reader.MARCReader(fh))
-        # record_to_xml() with quiet set to False should generate errors
-        #   and write them to sys.stderr
-        xml = pymarc.record_to_xml(record, namespace=False)
-        # look for the xmlns in the written xml, should be -1
-        self.assertNotIn(b'xmlns="http://www.loc.gov/MARC21/slim"', xml)
+    def test_record_to_xml_without_namespace(self):
+        with open('test/test.dat', 'rb') as fh:
+            record = next(pymarc.reader.MARCReader(fh))
+            xml = pymarc.record_to_xml(record, namespace=False)
+            self.assertNotIn(b'xmlns="http://www.loc.gov/MARC21/slim"', xml)
 
-        # record_to_xml() with quiet set to True should not generate errors
-        xml = pymarc.record_to_xml(record, namespace=True)
-        # look for the xmlns in the written xml, should be >= 0
-        self.assertIn(b'xmlns="http://www.loc.gov/MARC21/slim"', xml)
+    def test_parse_xml_to_array_with_bad_tag(self):
+        with open('test/bad_tag.xml') as fh:
+            record = pymarc.parse_xml_to_array(fh)
+            self.assertEqual(len(record), 1)
 
-        fh.close()
-
-    def test_bad_tag(self):
-        a = pymarc.parse_xml_to_array(open('test/bad_tag.xml'))
-        self.assertEqual(len(a), 1)
 
 def suite():
     test_suite = unittest.makeSuite(XmlTest, 'test')
