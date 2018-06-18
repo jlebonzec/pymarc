@@ -1,4 +1,4 @@
-"The pymarc.field file."
+""" The pymarc file for field manipulation """
 
 import logging
 
@@ -28,10 +28,11 @@ class Field(Iterator):
         field = Field(tag='001', data='fol05731351')
 
     """
+
     def __init__(self, tag, indicators=None, subfields=None, data=u''):
-        if indicators == None:
+        if indicators is None:
             indicators = []
-        if subfields == None:
+        if subfields is None:
             subfields = []
         indicators = [text_type(x) for x in indicators]
 
@@ -66,11 +67,11 @@ class Field(Iterator):
         [3] http://www.loc.gov/marc/mnemonics.html
         """
         if self.is_control_field():
-            text = '=%s  %s' % (self.tag, self.data.replace(' ','\\'))
+            text = '=%s  %s' % (self.tag, self.data.replace(' ', '\\'))
         else:
-            text = '=%s  ' % (self.tag)
+            text = '=%s  ' % self.tag
             for indicator in self.indicators:
-                if indicator in (' ','\\'):
+                if indicator in (' ', '\\'):
                     text += '\\'
                 else:
                     text += '%s' % indicator
@@ -114,10 +115,10 @@ class Field(Iterator):
             raise KeyError("more than one code '%s'" % code)
         elif len(subfields) == 0:
             raise KeyError("no code '%s'" % code)
-        num_code = len(self.subfields)//2
+        num_code = len(self.subfields) // 2
         while num_code >= 0:
-            if self.subfields[(num_code*2)-2] == code:
-                self.subfields[(num_code*2)-1] = value
+            if self.subfields[(num_code * 2) - 2] == code:
+                self.subfields[(num_code * 2) - 1] = value
                 break
             num_code -= 1
 
@@ -128,8 +129,8 @@ class Field(Iterator):
         if not hasattr(self, 'subfields'):
             raise StopIteration
         while self.__pos < len(self.subfields):
-            subfield = (self.subfields[ self.__pos ],
-                self.subfields[ self.__pos+1 ])
+            subfield = (self.subfields[self.__pos],
+                        self.subfields[self.__pos + 1])
             self.__pos += 2
             return subfield
         raise StopIteration
@@ -231,7 +232,8 @@ class Field(Iterator):
             else:
                 if subfield[0] not in ('v', 'x', 'y', 'z'):
                     fielddata += ' %s' % subfield[1]
-                else: fielddata += ' -- %s' % subfield[1]
+                else:
+                    fielddata += ' -- %s' % subfield[1]
         return fielddata.strip()
 
     def is_subject_field(self):
@@ -250,17 +252,21 @@ class RawField(Field):
 
     Should only be used when input records are wrongly encoded.
     """
+
     def as_marc(self, encoding=None):
         """
         used during conversion of a field to raw marc
         """
         if encoding is not None:
-            logging.warn("Attempt to force a RawField into encoding %s", encoding)
+            logging.warn("Attempt to force a RawField into encoding %s",
+                         encoding)
         if self.is_control_field():
             return self.data + END_OF_FIELD
-        marc = self.indicator1.encode('ascii') + self.indicator2.encode('ascii')
+        marc = self.indicator1.encode('ascii') + self.indicator2.encode(
+            'ascii')
         for subfield in self:
-            marc += SUBFIELD_INDICATOR.encode('ascii') + subfield[0] + subfield[1]
+            marc += SUBFIELD_INDICATOR.encode('ascii') + subfield[0] + \
+                    subfield[1]
         return marc + END_OF_FIELD
 
 

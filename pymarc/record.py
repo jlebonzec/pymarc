@@ -5,11 +5,11 @@ import logging
 from six import Iterator
 
 from pymarc.exceptions import BaseAddressInvalid, RecordLeaderInvalid, \
-        BaseAddressNotFound, RecordDirectoryInvalid, NoFieldsFound, \
-        FieldNotFound
+    BaseAddressNotFound, RecordDirectoryInvalid, NoFieldsFound, \
+    FieldNotFound
 from pymarc.constants import LEADER_LEN, DIRECTORY_ENTRY_LEN, END_OF_RECORD
 from pymarc.field import Field, SUBFIELD_INDICATOR, END_OF_FIELD, \
-        map_marc8_field, RawField
+    map_marc8_field, RawField
 from pymarc.marc8 import marc8_to_unicode
 
 izip_longest = six.moves.zip_longest
@@ -25,8 +25,8 @@ except ImportError:
     # http://pypi.python.org/pypi/simplejson/1.7.3
     import simplejson as json
 
-
 isbn_regex = re.compile(r'([0-9\-xX]+)')
+
 
 @six.python_2_unicode_compatible
 class Record(Iterator):
@@ -61,12 +61,13 @@ class Record(Iterator):
     """
 
     def __init__(self, data='', to_unicode=True, force_utf8=False,
-        hide_utf8_warnings=False, utf8_handling='strict',
-        leader=' ' * LEADER_LEN):
+                 hide_utf8_warnings=False, utf8_handling='strict',
+                 leader=' ' * LEADER_LEN):
         self.leader = leader[0:10] + '22' + leader[12:20] + '4500'
         self.fields = list()
         self.pos = 0
         self.force_utf8 = force_utf8
+
         if len(data) > 0:
             self.decode_marc(data, to_unicode=to_unicode,
                              force_utf8=force_utf8,
@@ -185,7 +186,7 @@ class Record(Iterator):
             try:
                 self.fields.remove(f)
             except ValueError:
-                raise FieldNotFound
+                raise FieldNotFound()
 
     def remove_fields(self, *tags):
         """
@@ -195,7 +196,8 @@ class Record(Iterator):
 
         will remove all the fields marked with tags '200' or '899'.
         """
-        self.fields[:] = (field for field in self.fields if field.tag not in tags)
+        self.fields[:] = (field for field in self.fields if
+                          field.tag not in tags)
 
     def get_fields(self, *args):
         """
@@ -213,13 +215,13 @@ class Record(Iterator):
         If no tag is passed in to get_fields() a list of all the fields will be
         returned.
         """
-        if (len(args) == 0):
+        if len(args) == 0:
             return self.fields
 
         return [f for f in self.fields if f.tag in args]
 
     def decode_marc(self, marc, to_unicode=True, force_utf8=False,
-        hide_utf8_warnings=False, utf8_handling='strict'):
+                    hide_utf8_warnings=False, utf8_handling='strict'):
         """
         decode_marc() accepts a MARC record in transmission format as a
         a string argument, and will populate the object based on the data
@@ -246,7 +248,7 @@ class Record(Iterator):
 
         # extract directory, base_address-1 is used since the
         # director ends with an END_OF_FIELD byte
-        directory = marc[LEADER_LEN:base_address-1].decode('ascii')
+        directory = marc[LEADER_LEN:base_address - 1].decode('ascii')
 
         # determine the number of fields in record
         if len(directory) % DIRECTORY_ENTRY_LEN != 0:
@@ -262,13 +264,14 @@ class Record(Iterator):
             entry_tag = entry[0:3]
             entry_length = int(entry[3:7])
             entry_offset = int(entry[7:12])
-            entry_data = marc[base_address + entry_offset :
-                base_address + entry_offset + entry_length - 1]
+            entry_data = marc[base_address + entry_offset:
+            base_address + entry_offset + entry_length - 1]
 
             # assume controlfields are numeric; replicates ruby-marc behavior
             if entry_tag < '010' and entry_tag.isdigit():
                 if to_unicode:
-                    field = Field(tag=entry_tag, data=entry_data.decode(encoding))
+                    field = Field(tag=entry_tag,
+                                  data=entry_data.decode(encoding))
                 else:
                     field = RawField(tag=entry_tag, data=entry_data)
             else:
@@ -294,7 +297,8 @@ class Record(Iterator):
                     first_indicator = subs[0][0]
                     second_indicator = ' '
                 elif len(subs[0]) > 2:
-                    logging.warning("more than 2 indicators found: %s", entry_data)
+                    logging.warning("more than 2 indicators found: %s",
+                                    entry_data)
                     first_indicator = subs[0][0]
                     second_indicator = subs[0][1]
                 else:
@@ -316,15 +320,15 @@ class Record(Iterator):
                     subfields.append(data)
                 if to_unicode:
                     field = Field(
-                        tag = entry_tag,
-                        indicators = [first_indicator, second_indicator],
-                        subfields = subfields,
+                        tag=entry_tag,
+                        indicators=[first_indicator, second_indicator],
+                        subfields=subfields,
                     )
                 else:
                     field = RawField(
-                        tag = entry_tag,
-                        indicators = [first_indicator, second_indicator],
-                        subfields = subfields,
+                        tag=entry_tag,
+                        indicators=[first_indicator, second_indicator],
+                        subfields=subfields,
                     )
             self.add_field(field)
             field_count += 1
@@ -356,7 +360,8 @@ class Record(Iterator):
                 directory += ('%03d' % int(field.tag)).encode(encoding)
             else:
                 directory += ('%03s' % field.tag).encode(encoding)
-            directory += ('%04d%05d' % (len(field_data), offset)).encode(encoding)
+            directory += ('%04d%05d' % (len(field_data), offset)).encode(
+                encoding)
 
             offset += len(field_data)
 
@@ -375,7 +380,8 @@ class Record(Iterator):
         # update the leader with the current record length and base address
         # the lengths are fixed width and zero padded
         strleader = '%05d%s%05d%s' % \
-            (record_length, self.leader[5:12], base_address, self.leader[17:])
+                    (record_length, self.leader[5:12], base_address,
+                     self.leader[17:])
         leader = strleader.encode(encoding)
 
         return leader + directory + fields
@@ -394,10 +400,11 @@ class Record(Iterator):
             if field.is_control_field():
                 record['fields'].append({field.tag: field.data})
             else:
-                fd = {}
-                fd['subfields'] = []
-                fd['ind1'] = field.indicator1
-                fd['ind2'] = field.indicator2
+                fd = {
+                    'subfields': [],
+                    'ind1': field.indicator1,
+                    'ind2': field.indicator2
+                }
                 for tag, value in izip_longest(*[iter(field.subfields)] * 2):
                     fd['subfields'].append({tag: value})
                 record['fields'].append({field.tag: fd})
@@ -474,8 +481,9 @@ class Record(Iterator):
         occur with some frequency in OCLC and RLIN records.
         """
         subjlist = self.get_fields('600', '610', '611', '630', '648', '650',
-            '651', '653', '654', '655', '656', '657', '658', '662', '690',
-            '691', '696', '697', '698', '699')
+                                   '651', '653', '654', '655', '656', '657',
+                                   '658', '662', '690',
+                                   '691', '696', '697', '698', '699')
         return subjlist
 
     def addedentries(self):
@@ -484,8 +492,9 @@ class Record(Iterator):
         occur with some frequency in OCLC and RLIN records.
         """
         aelist = self.get_fields('700', '710', '711', '720', '730', '740',
-            '752', '753', '754', '790', '791', '792', '793', '796', '797',
-            '798', '799')
+                                 '752', '753', '754', '790', '791', '792',
+                                 '793', '796', '797',
+                                 '798', '799')
         return aelist
 
     def location(self):
@@ -497,13 +506,19 @@ class Record(Iterator):
         Return all 5xx fields in an array.
         """
         notelist = self.get_fields('500', '501', '502', '504', '505',
-            '506', '507', '508', '510', '511', '513', '514', '515',
-            '516', '518', '520', '521', '522', '524', '525', '526',
-            '530', '533', '534', '535', '536', '538', '540', '541',
-            '544', '545', '546', '547', '550', '552', '555', '556',
-            '561', '562', '563', '565', '567', '580', '581', '583',
-            '584', '585', '586', '590', '591', '592', '593', '594',
-            '595', '596', '597', '598', '599')
+                                   '506', '507', '508', '510', '511', '513',
+                                   '514', '515',
+                                   '516', '518', '520', '521', '522', '524',
+                                   '525', '526',
+                                   '530', '533', '534', '535', '536', '538',
+                                   '540', '541',
+                                   '544', '545', '546', '547', '550', '552',
+                                   '555', '556',
+                                   '561', '562', '563', '565', '567', '580',
+                                   '581', '583',
+                                   '584', '585', '586', '590', '591', '592',
+                                   '593', '594',
+                                   '595', '596', '597', '598', '599')
         return notelist
 
     def physicaldescription(self):
@@ -533,9 +548,10 @@ class Record(Iterator):
 
         return None
 
+
 def map_marc8_record(r):
     r.fields = map(map_marc8_field, r.fields)
     l = list(r.leader)
-    l[9] = 'a' # see http://www.loc.gov/marc/specifications/speccharucs.html
+    l[9] = 'a'  # see http://www.loc.gov/marc/specifications/speccharucs.html
     r.leader = "".join(l)
     return r

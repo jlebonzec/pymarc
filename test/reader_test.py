@@ -11,14 +11,27 @@ class MARCReaderFileTest(unittest.TestCase):
     based access to a MARC file.
     """
 
+    @classmethod
+    def setUpClass(cls):
+        cls.seen = 0
+        cls.fh = open('test/test.dat', 'rb')
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.fh.close()
+
     def setUp(self):
+        self.seen = 0
         self.fh = open('test/test.dat', 'rb')
         self.reader = pymarc.MARCReader(self.fh)
 
     def tearDown(self):
+        self.fh.close()
         if self.reader:
             self.reader.close()
-        self.fh.close()
+
+    def count(self, record):
+        self.seen += 1
 
     def test_iterator(self):
         count = 0
@@ -27,25 +40,15 @@ class MARCReaderFileTest(unittest.TestCase):
         self.assertEqual(count, 10, 'found expected number of MARC21 records')
 
     def test_map_records(self):
-        self.count = 0
-
-        def f(r):
-            self.count += 1
-
         with open('test/test.dat', 'rb') as fh:
-            pymarc.map_records(f, fh)
-            self.assertEqual(self.count, 10, 'map_records appears to work')
+            pymarc.map_records(self.count, fh)
+            self.assertEqual(self.seen, 10, 'map_records appears to work')
 
     def test_multi_map_records(self):
-        self.count = 0
-
-        def f(r):
-            self.count += 1
-
         fh1 = open('test/test.dat', 'rb')
         fh2 = open('test/test.dat', 'rb')
-        pymarc.map_records(f, fh1, fh2)
-        self.assertEqual(self.count, 20, 'map_records appears to work')
+        pymarc.map_records(self.count, fh1, fh2)
+        self.assertEqual(self.seen, 20, 'map_records appears to work')
         fh1.close()
         fh2.close()
 
@@ -63,8 +66,7 @@ class MARCReaderFileTest(unittest.TestCase):
         with codecs.open('test/test.dat', encoding='utf-8') as fh:
             reader = pymarc.MARCReader(fh)
             record = next(reader)
-            self.assertEqual(record['245']['a'],
-                             u'ActivePerl with ASP and ADO /')
+            self.assertEqual(record['245']['a'], u'ActivePerl with ASP and ADO /')
 
     def test_bad_indicator(self):
         with open('test/bad_indicator.dat', 'rb') as fh:
@@ -83,14 +85,14 @@ class MARCReaderFileTest(unittest.TestCase):
 
 
 class MARCReaderStringTest(MARCReaderFileTest):
+
+    # Inherit tests from MARCReaderFileTest
+
     def setUp(self):
-        fh = open('test/test.dat')
-        raw = fh.read()
-        fh.close()
+        with open('test/test.dat') as fh:
+            raw = fh.read()
 
         self.reader = pymarc.reader.MARCReader(six.b(raw))
-
-        # inherit same tests from MARCReaderTestFile
 
 
 def suite():
@@ -98,7 +100,6 @@ def suite():
     string_suite = unittest.makeSuite(MARCReaderStringTest, 'test')
     test_suite = unittest.TestSuite((file_suite, string_suite))
     return test_suite
-
 
 if __name__ == '__main__':
     unittest.main()

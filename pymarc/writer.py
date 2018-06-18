@@ -19,7 +19,6 @@ except ImportError:
 
 
 class Writer(object):
-
     def __init__(self, file_handle):
         self.file_handle = file_handle
 
@@ -75,7 +74,7 @@ class JSONWriter(Writer):
         """
         Writes a record.
         """
-        Writer.write(self, record)
+        super(JSONWriter, self).write(record)
         if self.write_count > 0:
             self.file_handle.write(',')
         json.dump(record.as_dict(), self.file_handle, separators=(',', ':'))
@@ -89,7 +88,7 @@ class JSONWriter(Writer):
         handle that was passed in to the constructor. The default is True.
         """
         self.file_handle.write(']')
-        Writer.close(self, close_fh)
+        super(JSONWriter, self).close(close_fh)
 
 
 class MARCWriter(Writer):
@@ -129,7 +128,7 @@ class MARCWriter(Writer):
         """
         Writes a record.
         """
-        Writer.write(self, record)
+        super(MARCWriter, self).write(record)
         self.file_handle.write(record.as_marc())
 
 
@@ -167,7 +166,7 @@ class TextWriter(Writer):
         """
         Writes a record.
         """
-        Writer.write(self, record)
+        super(TextWriter, self).write(record)
         if self.write_count > 0:
             self.file_handle.write('\n')
         self.file_handle.write(str(record))
@@ -218,7 +217,7 @@ class XMLWriter(Writer):
         """
         Writes a record.
         """
-        Writer.write(self, record)
+        super(XMLWriter, self).write(record)
         node = pymarc.record_to_xml_node(record)
         self.file_handle.write(ET.tostring(node, encoding='utf-8'))
 
@@ -230,4 +229,4 @@ class XMLWriter(Writer):
         that was passed in to the constructor. The default is True.
         """
         self.file_handle.write(b'</collection>')
-        Writer.close(self, close_fh)
+        super(XMLWriter, self).close(close_fh)
