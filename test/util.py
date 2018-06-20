@@ -1,3 +1,2 @@
 import sys
-sys.path.append( '../pymarc' )
-
+sys.path.append('../pymarc')
