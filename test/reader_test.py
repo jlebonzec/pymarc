@@ -94,6 +94,9 @@ class MARCReaderStringTest(MARCReaderFileTest):
 
         self.reader = pymarc.reader.MARCReader(six.b(raw))
 
+    def tearDown(self):
+        self.reader.close()
+
 
 def suite():
     file_suite = unittest.makeSuite(MARCReaderFileTest, 'test')
