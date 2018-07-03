@@ -24,7 +24,7 @@ class Writer(object):
 
     def write(self, record):
         if not isinstance(record, Record):
-            raise WriteNeedsRecord
+            raise WriteNeedsRecord()
 
     def close(self, close_fh=True):
         """

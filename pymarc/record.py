@@ -116,7 +116,7 @@ class Record(Iterator):
 
     def __next__(self):
         if self.__pos >= len(self.fields):
-            raise StopIteration
+            raise StopIteration()
         self.__pos += 1
         return self.fields[self.__pos - 1]
 
@@ -232,7 +232,7 @@ class Record(Iterator):
         # extract record leader
         self.leader = marc[0:LEADER_LEN].decode('ascii')
         if len(self.leader) != LEADER_LEN:
-            raise RecordLeaderInvalid
+            raise RecordLeaderInvalid()
 
         if self.leader[9] == 'a' or self.force_utf8:
             encoding = 'utf-8'
@@ -242,9 +242,9 @@ class Record(Iterator):
         # extract the byte offset where the record data starts
         base_address = int(marc[12:17])
         if base_address <= 0:
-            raise BaseAddressNotFound
+            raise BaseAddressNotFound()
         if base_address >= len(marc):
-            raise BaseAddressInvalid
+            raise BaseAddressInvalid()
 
         # extract directory, base_address-1 is used since the
         # director ends with an END_OF_FIELD byte
@@ -252,7 +252,7 @@ class Record(Iterator):
 
         # determine the number of fields in record
         if len(directory) % DIRECTORY_ENTRY_LEN != 0:
-            raise RecordDirectoryInvalid
+            raise RecordDirectoryInvalid()
         field_total = len(directory) / DIRECTORY_ENTRY_LEN
 
         # add fields to our record using directory offsets
@@ -334,7 +334,7 @@ class Record(Iterator):
             field_count += 1
 
         if field_count == 0:
-            raise NoFieldsFound
+            raise NoFieldsFound()
 
     def as_marc(self):
         """
@@ -419,7 +419,7 @@ class Record(Iterator):
 
     def title(self):
         """
-        Returns the title of the record (245 $a an $b).
+        Returns the title of the record (245 $a and $b).
         """
         try:
             title = self['245']['a']

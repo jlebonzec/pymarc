@@ -127,13 +127,13 @@ class Field(Iterator):
         Needed for iteration.
         """
         if not hasattr(self, 'subfields'):
-            raise StopIteration
+            raise StopIteration()
         while self.__pos < len(self.subfields):
             subfield = (self.subfields[self.__pos],
                         self.subfields[self.__pos + 1])
             self.__pos += 2
             return subfield
-        raise StopIteration
+        raise StopIteration()
 
     def value(self):
         """
